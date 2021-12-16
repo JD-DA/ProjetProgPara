@@ -110,6 +110,7 @@ void calcul_direction(float *terrain_local, int *dir, int nb_bandes, int taille_
 #pragma omp parallel for schedule(runtime)
         for (int y = 0; y < taille_bande; ++y) {
             for (int x = 0; x < nb_cols; ++x) {
+
                 if(x==0){
                     dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
                 }else if(x==nb_cols-1){
@@ -169,3 +170,29 @@ int chercher_min_bord(int x, int y){
 }
 
 
+void calcul_accumulation(float *terrain_local, float *dir, float *acc, int nb_bandes, int taille_bande, int nb_cols, float no_value) {
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    int nb_bandes_local = nb_bandes/nprocs;
+
+    //Initialisation
+    int nb_non_marques = 0;
+    for (int i=0; i<nb_bandes_local; ++i) {
+        for (int y=0; y<taille_bande; ++y) {
+            for (int x=0; x<nb_cols; ++x) {
+                int j = coords_to_indice(x,y,i,taille_bande,nb_cols);
+                if (dir[j] == 0)
+                    acc[j] = 1
+                else {
+                    acc[j] = 0;
+                    nb_non_marques++;
+                }
+            }
+        }
+    }
+
+    while (nb_non_marques > 0) {
+        nb_non_marques--;
+    }
+}
