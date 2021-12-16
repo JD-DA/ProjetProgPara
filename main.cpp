@@ -43,6 +43,19 @@ int main(int argc, char **argv) {
 
     round_robin(donnees,terrain_local,taille_bande,nb_lignes,nb_cols,root);
 
+    int* terrain_dir = new int[(taille_bande + 2) * nb_bandes * nb_cols];
+    calcul_direction(terrain_local, terrain_dir, nb_bandes,taille_bande,nb_cols,no_value);
+    cout<<"Tab directions local : "<<endl;
+    if(pid==root){
+        for (int i = 0; i < (taille_bande + 2) * nb_bandes * nb_cols; ++i) {
+            if(i%nb_cols==0 and i!=0)
+                cout<<endl;
+            cout << terrain_dir[i] <<" ";
+        }
+        cout<<endl;
+    }
+
+
    // cout << "je suis : " << pid << " taille : " << taille[0] << " " << taille[1] << " nb bandes : " << nb_bandes << endl;
 
     if (pid==1) {

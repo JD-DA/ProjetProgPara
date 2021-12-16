@@ -107,20 +107,23 @@ void calcul_direction(float *terrain_local, int *dir, int nb_bandes, int taille_
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     int nb_bande_local = nb_bandes/nprocs;
     for (int i = 0; i < nb_bande_local; ++i) {
+        if(pid==0){
+            cout<<i<<endl;
+        }
 #pragma omp parallel for schedule(runtime)
         for (int y = 0; y < taille_bande; ++y) {
             for (int x = 0; x < nb_cols; ++x) {
 
                 if(x==0){
-                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                    dir[coords_to_indice(x, y, i, taille_bande, nb_cols)] = chercher_min_bord(x, y);
                 }else if(x==nb_cols-1){
-                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
-                }else if(y==0 and pid==0 and nb_bande_local==0){
-                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
-                }else if (y==taille_bande-1 and pid==nprocs-1 and nb_bande_local==nb_bandes-1){
-                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                    dir[coords_to_indice(x, y, i, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                }else if(y==0 and pid==0 and i==0){
+                    dir[coords_to_indice(x, y, i, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                }else if (y==taille_bande-1 and pid==nprocs-1 and i==nb_bandes-1){
+                    dir[coords_to_indice(x, y, i, taille_bande, nb_cols)] = chercher_min_bord(x, y);
                 }else{
-                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min(x, y,terrain_local,nb_bande_local,taille_bande,nb_cols,no_value);
+                    dir[coords_to_indice(x, y, i, taille_bande, nb_cols)] = chercher_min(x, y,terrain_local,i,taille_bande,nb_cols,no_value);
                 }
             }
         }
