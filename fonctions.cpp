@@ -99,3 +99,41 @@ void round_robin(mnt* mnt, float* terrain_local, int taille_bande, int nb_lignes
     }
 }
 
+void calcul_direction(float *terrain_local, int *dir, int nb_bandes, int taille_bande, int nb_cols, float no_value){
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    int nb_bande_local = nb_bandes/nprocs;
+    for (int i = 0; i < nb_bande_local; ++i) {
+#pragma omp parallel for
+        for (int y = 0; y < taille_bande; ++y) {
+            for (int x = 0; x < nb_cols; ++x) {
+                if(x==0){
+                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                }else if(x==nb_cols-1){
+                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                }else if(y==0 and pid==0 and nb_bande_local==0){
+                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                }else if (y==taille_bande-1 and pid==nprocs-1 and nb_bande_local==nb_bandes-1){
+                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
+                }else{
+                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min(x, y);
+                }
+            }
+        }
+    }
+}
+
+int coords_to_indice(int x,int y, int nBande,int taille_bande,int nb_cols){
+    return x+nb_cols*(1+y+nBande*(taille_bande+2));
+}
+
+int chercher_min(int x, int y){
+    return 1;
+}
+
+int chercher_min_bord(int x, int y){
+    return 1;
+}
+
+
