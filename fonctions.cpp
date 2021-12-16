@@ -5,7 +5,7 @@
 #include <mpi.h>
 #include "Terrain.h"
 #include "fonctions.h"
-
+#include <queue>
 
 void round_robin(mnt* mnt, float* terrain_local, int taille_bande, int nb_lignes, int nb_cols, int root) {
     int pid, nprocs;
@@ -173,7 +173,7 @@ int chercher_min_bord(int x, int y){
 }
 
 
-void calcul_accumulation(float *terrain_local, float *dir, float *acc, int nb_bandes, int taille_bande, int nb_cols, float no_value) {
+void calcul_accumulation(float *terrain_local, int *dir, float *acc, int nb_bandes, int taille_bande, int nb_cols, float no_value) {
     int pid, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -181,21 +181,114 @@ void calcul_accumulation(float *terrain_local, float *dir, float *acc, int nb_ba
 
     //Initialisation
     int nb_non_marques = 0;
+    queue<int*> points_non_marques;
     for (int i=0; i<nb_bandes_local; ++i) {
         for (int y=0; y<taille_bande; ++y) {
             for (int x=0; x<nb_cols; ++x) {
                 int j = coords_to_indice(x,y,i,taille_bande,nb_cols);
-                if (dir[j] == 0)
-                    acc[j] = 1
+                if (dir[j] == 0 or terrain_local[j] == no_value)
+                    acc[j] = 1.;
                 else {
-                    acc[j] = 0;
+                    acc[j] = 0.;
                     nb_non_marques++;
+                    int triplet[3] = {x,y,i};
+                    points_non_marques.push(triplet); //Un point de la file est définit par des coordonées dans une bande et le numéro de cette bande
                 }
             }
         }
     }
 
-    while (nb_non_marques > 0) {
-        nb_non_marques--;
+    while (nb_non_marques > 0) { //On continue de boucler tant qu'il reste des points à calculer
+        queue<int*> new_points_non_marques;
+        while(!points_non_marques.empty()) { //On parcourt la file des points non-marqués pour tester s'il sont calculables
+            int *coords = points_non_marques.front();
+            points_non_marques.pop();
+            int x = coords[0];
+            int y = coords[1];
+            int num_bande = coords[2];
+            float *res_voisins = verifier_voisins(x,y,acc,dir,num_bande,taille_bande,nb_cols);
+            float somme = 1.;
+            bool calculer_point = true;
+            for (int j=1; j<9; ++j) { //Quand on parcourt les voisins, si une des valeurs est égale à 0, cela veut dire qu'il est dirigé vers le point mais n'est pas encore marqué
+                float res_j = res_voisins[j];
+                if (res_j == 0.)
+                    calculer_point = false;
+                else if (res_j > 0.)
+                    somme += res_j;
+            }
+            if (calculer_point) {
+                acc[coords_to_indice(x, y, num_bande, taille_bande, nb_cols)] = somme;
+                nb_non_marques--;
+            } else {
+                new_points_non_marques.push(coords); //Si l'on n'a pas calculé le point, on le remet dans la nouvelle file
+            }
+        }
+        points_non_marques = new_points_non_marques;
+
+        //Comunications des ghost entre bandes voisines
     }
+}
+
+/**
+ * @param x
+ * @param y
+ * @param acc
+ * @param dir
+ * @param nBande
+ * @param taille_bande
+ * @param nb_cols
+ * @return un tableau de float où, pour le voisin i, tab[i] est -1 s'il ne se déverse pas sur le point, et sinon tab[i] est la valeur de son flot
+ */
+float* verifier_voisins(int x, int y, float *acc, int *dir, int nBande, int taille_bande, int nb_cols) {
+    float *resultats_voisins = new float [9];
+
+    int j = coords_to_indice(x-1,y-1,nBande,taille_bande,nb_cols); //point nord-ouest
+    if (dir[j] == 4)
+        resultats_voisins[8] = acc[j];
+    else
+        resultats_voisins[8] = -1.; //Valeur qui sera ignorée dans le parcours des voisins
+
+    j = coords_to_indice(x,y-1,nBande,taille_bande,nb_cols); //point nord
+    if (dir[j] == 5)
+        resultats_voisins[1] = acc[j];
+    else
+        resultats_voisins[1] = -1.;
+
+    j = coords_to_indice(x+1,y-1,nBande,taille_bande,nb_cols); //point nord-est
+    if (dir[j] == 6)
+        resultats_voisins[2] = acc[j];
+    else
+        resultats_voisins[2] = -1.;
+
+    j = coords_to_indice(x-1,y,nBande,taille_bande,nb_cols); //point ouest
+    if (dir[j] == 3)
+        resultats_voisins[7] = acc[j];
+    else
+        resultats_voisins[7] = -1.;
+
+    j = coords_to_indice(x+1,y,nBande,taille_bande,nb_cols); //point est
+    if (dir[j] == 7)
+        resultats_voisins[3] = acc[j];
+    else
+        resultats_voisins[3] = -1.;
+
+    j = coords_to_indice(x-1,y+1,nBande,taille_bande,nb_cols); //point sud-ouest
+    if (dir[j] == 2)
+        resultats_voisins[6] = acc[j];
+    else
+        resultats_voisins[6] = -1.;
+
+    j = coords_to_indice(x,y+1,nBande,taille_bande,nb_cols); //point sud
+    if (dir[j] == 1)
+        resultats_voisins[5] = acc[j];
+    else
+        resultats_voisins[5] = -1.;
+
+    j = coords_to_indice(x+1,y+1,nBande,taille_bande,nb_cols); //point sud-est
+    if (dir[j] == 8)
+        resultats_voisins[4] = acc[j];
+    else
+        resultats_voisins[4] = -1.;
+
+    return resultats_voisins;
 }
