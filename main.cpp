@@ -45,7 +45,8 @@ int main(int argc, char **argv) {
 
     int* terrain_dir = new int[(taille_bande + 2) * nb_bandes * nb_cols];
     calcul_direction(terrain_local, terrain_dir, nb_bandes,taille_bande,nb_cols,no_value);
-    cout<<"Tab directions local : "<<endl;
+    rassembler(terrain_local, terrain_dir,nb_bandes,taille_bande,nb_cols,no_value);
+    /*cout<<"Tab directions local : "<<endl;
     if(pid==root){
         for (int i = 0; i < (taille_bande + 2) * nb_bandes * nb_cols; ++i) {
             if(i%nb_cols==0 and i!=0)
@@ -53,17 +54,17 @@ int main(int argc, char **argv) {
             cout << terrain_dir[i] <<" ";
         }
         cout<<endl;
-    }
+    }*/
 
 
    // cout << "je suis : " << pid << " taille : " << taille[0] << " " << taille[1] << " nb bandes : " << nb_bandes << endl;
 
     if (pid==1) {
        cout << "je suis " << pid << " terrain_local:";
-       for (int i = 0; i < nb_bandes * (taille_bande + 2); i++)
+       /*for (int i = 0; i < nb_bandes * (taille_bande + 2); i++)
            for (int j = 0; j < nb_cols; j++)
                cout << terrain_local[i * nb_cols + j] << " ";
-       cout << endl;
+       cout << endl;*/
    }
     MPI_Finalize();
     return 0;

@@ -4,3 +4,8 @@ Nous avons réalisé une fonction qui va itérer sur chaque bande locale puis l'
 De plus pour permettre une certaine parallélisation nous avons ajouté une commande ```#prama omp parallel for``` au niveau du ```for``` qui itére sur nos lignes de bande.
 Afin d'utiliser nos bandes et les ghosts disponible nous avons implémenté une fonction ```coords_to_indice``` qui pour un couple x,y donné retourne l'emplacement dans ```terrain_local``` de cette donnée.
 Cette fonction prend en compte les plage de données ghosts et renvoi aussi leurs positions.
+
+###Justification du ```#prama omp parallel for```
+ON se trouve sur une machine hybride, via MPI on parallélise les calculs en répartissant les données sur les différents noeuds de la machine mais afin d'optimiser un peu plus notre programme on peut aussi dans les calculs sur chaque noeud de rajouter une directive omp qui va donc répartir la charge du for sur les différents coeurs du processeur du noeud de la machine. 
+Ainsi ici pour chaque bande on va répartir les lignes calculées.
+De plus on peut utiliser un ```schedule(dynamic)```

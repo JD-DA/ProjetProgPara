@@ -172,6 +172,58 @@ int chercher_min_bord(int x, int y){
     return 1;
 }
 
+void rassembler(float *terrain_local, int *dir, int nb_bandes, int taille_bande, int nb_cols, float no_value){
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    int nombreIter=nb_bandes / nprocs;
+
+    for (int i = 0; i < 1; ++i) {
+        cout<<pid<<" "<<i<<endl;
+        //cas de la premiere itération
+        if(pid==0 and i==0){
+            cout<<pid<<" "<<i<<endl;
+            MPI_Ssend(dir+(taille_bande)*nb_cols,nb_cols, MPI_FLOAT, (nprocs+1)%nprocs, 0, MPI_COMM_WORLD); //echange derniere ligne 0 vers 1
+            cout<<"send fait"<<endl;
+            MPI_Recv(dir+(taille_bande+1)*nb_cols, nb_cols,MPI_FLOAT, (nprocs+1)%nprocs, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la premiere ligne de 1
+            cout<<"recev fait"<<endl;
+        }else if(pid==1 and i==0){
+            MPI_Recv(dir, nb_cols,MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la derniere ligne de 0
+            cout<<"recv1"<<endl;
+            MPI_Ssend(dir+nb_cols,nb_cols, MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD);//envoie de la derniere ligne de 1
+            cout<<"send1"<<endl;
+            //vers la prochaine itération
+            MPI_Recv(dir+(taille_bande+1)*nb_cols, nb_cols,MPI_FLOAT, (nprocs+1)%nprocs, (nprocs+1)%nprocs, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la premiere ligne de bande suivante
+            cout<<"recv12"<<endl;
+            MPI_Ssend(dir+(taille_bande)*nb_cols,nb_cols, MPI_FLOAT, (nprocs+1)%nprocs, 0, MPI_COMM_WORLD);
+            cout<<"send12"<<endl;
+        }else if(pid==0 and i==nombreIter-1){
+            MPI_Ssend(dir+nb_cols,nb_cols, MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD); //travail avec l'iteration precedente
+            MPI_Recv(dir, nb_cols,MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+            //vers la prochaine itération
+            MPI_Ssend(dir+(taille_bande)*nb_cols,nb_cols, MPI_FLOAT, (nprocs+1)%nprocs, 0, MPI_COMM_WORLD);//envoie de la derniere ligne de l'avant derniere bande a la derniere bande
+            MPI_Recv(dir+(taille_bande+1)*nb_cols, nb_cols,MPI_FLOAT, (nprocs+1)%nprocs,0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la premiere ligne de la derniere bande
+        }else if(pid==1 and i==nombreIter-1){
+            MPI_Recv(dir+(taille_bande+1)*nb_cols, nb_cols,MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la deniere ligne de l'avant derniere bande
+            MPI_Ssend(dir+(taille_bande)*nb_cols,nb_cols, MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD); //envoie de la premiere ligne de la derniere bande
+        }else {
+            if (pid % 2 == 0) {
+                MPI_Ssend(dir+nb_cols*i*(taille_bande+2)+1,nb_cols, MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD);//envoie de la premiere ligne a la bande precedente
+                MPI_Recv(dir+nb_cols*i*(taille_bande+2),nb_cols,MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la derniere ligne de la bande precedente
+                MPI_Ssend(dir+nb_cols*(i+1)*(taille_bande+2)-1,nb_cols, MPI_FLOAT, (nprocs+1)%nprocs, 0, MPI_COMM_WORLD);//envoie de la derniere ligne a la bande suivante (ci-dessous)
+                MPI_Recv(dir+nb_cols*(i+1)*(taille_bande+2), nb_cols,MPI_FLOAT, (nprocs+1)%nprocs,0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la premiere ligne de la bande suivante
+            } else {
+                MPI_Recv(dir, nb_cols*i*(taille_bande+2),MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la derniere ligne de 0
+                MPI_Ssend(dir+nb_cols*i*(taille_bande+2)+1,nb_cols, MPI_FLOAT, (nprocs-1+nprocs)%nprocs, 0, MPI_COMM_WORLD);//envoie de la derniere ligne de 1
+                MPI_Recv(dir+nb_cols*(i+1)*(taille_bande+2), nb_cols,MPI_FLOAT, (nprocs+1)%nprocs,0, MPI_COMM_WORLD,MPI_STATUS_IGNORE);// reception de la premiere ligne de bande suivante
+                MPI_Ssend(dir+nb_cols*(i+1)*(taille_bande+2)-1,nb_cols, MPI_FLOAT, (nprocs+1)%nprocs, 0, MPI_COMM_WORLD);
+            }
+        }
+    }
+
+
+}
+
 
 void calcul_accumulation(float *terrain_local, int *dir, float *acc, int nb_bandes, int taille_bande, int nb_cols, float no_value) {
     int pid, nprocs;
