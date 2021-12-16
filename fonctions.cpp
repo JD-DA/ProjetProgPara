@@ -4,6 +4,8 @@
 
 #include <mpi.h>
 #include "Terrain.h"
+#include "fonctions.h"
+
 
 void round_robin(mnt* mnt, float* terrain_local, int taille_bande, int nb_lignes, int nb_cols, int root) {
     int pid, nprocs;
@@ -117,7 +119,7 @@ void calcul_direction(float *terrain_local, int *dir, int nb_bandes, int taille_
                 }else if (y==taille_bande-1 and pid==nprocs-1 and nb_bande_local==nb_bandes-1){
                     dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min_bord(x, y);
                 }else{
-                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min(x, y);
+                    dir[coords_to_indice(x, y, nb_bande_local, taille_bande, nb_cols)] = chercher_min(x, y,terrain_local,nb_bande_local,taille_bande,nb_cols,no_value);
                 }
             }
         }
@@ -128,8 +130,29 @@ int coords_to_indice(int x,int y, int nBande,int taille_bande,int nb_cols){
     return x+nb_cols*(1+y+nBande*(taille_bande+2));
 }
 
-int chercher_min(int x, int y){
-    return 1;
+int chercher_min(int x, int y,float *terrain_local, int nBande, int taille_bande, int nb_cols,float nodata){
+    float tab[9];
+    if(terrain_local[coords_to_indice(x,y,nBande,taille_bande,nb_cols)]==nodata)
+        return 0;
+    tab[0]=terrain_local[coords_to_indice(x,y,nBande,taille_bande,nb_cols)];
+    tab[1]=terrain_local[coords_to_indice(x,y-1,nBande,taille_bande,nb_cols)];
+    tab[2]=terrain_local[coords_to_indice(x+1,y-1,nBande,taille_bande,nb_cols)];
+    tab[3]=terrain_local[coords_to_indice(x+1,y,nBande,taille_bande,nb_cols)];
+    tab[4]=terrain_local[coords_to_indice(x+1,y+1,nBande,taille_bande,nb_cols)];
+    tab[5]=terrain_local[coords_to_indice(x,y+1,nBande,taille_bande,nb_cols)];
+    tab[6]=terrain_local[coords_to_indice(x-1,y+1,nBande,taille_bande,nb_cols)];
+    tab[7]=terrain_local[coords_to_indice(x-1,y,nBande,taille_bande,nb_cols)];
+    tab[8]=terrain_local[coords_to_indice(x-1,y-1,nBande,taille_bande,nb_cols)];
+    float mini=tab[0];
+    int imin=0;
+    for (int i = 1; i < 9; ++i) {
+        if(tab[i]<mini and tab[i]!=nodata){
+            mini=tab[i];
+            imin=i;
+        }
+    }
+    return imin;
+
 }
 
 int chercher_min_bord(int x, int y){
