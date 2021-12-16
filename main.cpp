@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 
     int* terrain_dir = new int[(taille_bande + 2) * nb_bandes * nb_cols];
     calcul_direction(terrain_local, terrain_dir, nb_bandes,taille_bande,nb_cols,no_value);
-    rassembler(terrain_local, terrain_dir,nb_bandes,taille_bande,nb_cols,no_value);
+    //rassembler(terrain_local, terrain_dir,nb_bandes,taille_bande,nb_cols,no_value);
     /*cout<<"Tab directions local : "<<endl;
     if(pid==root){
         for (int i = 0; i < (taille_bande + 2) * nb_bandes * nb_cols; ++i) {
