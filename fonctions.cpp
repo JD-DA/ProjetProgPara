@@ -107,7 +107,7 @@ void calcul_direction(float *terrain_local, int *dir, int nb_bandes, int taille_
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     int nb_bande_local = nb_bandes/nprocs;
     for (int i = 0; i < nb_bande_local; ++i) {
-#pragma omp parallel for
+#pragma omp parallel for schedule(runtime)
         for (int y = 0; y < taille_bande; ++y) {
             for (int x = 0; x < nb_cols; ++x) {
                 if(x==0){
@@ -130,6 +130,9 @@ int coords_to_indice(int x,int y, int nBande,int taille_bande,int nb_cols){
     return x+nb_cols*(1+y+nBande*(taille_bande+2));
 }
 
+/*
+ * Va chercher le min autour du point de coordonnées x,y en tenant compte de la possiblité d'un nodata
+ */
 int chercher_min(int x, int y,float *terrain_local, int nBande, int taille_bande, int nb_cols,float nodata){
     float tab[9];
     if(terrain_local[coords_to_indice(x,y,nBande,taille_bande,nb_cols)]==nodata)
@@ -155,6 +158,12 @@ int chercher_min(int x, int y,float *terrain_local, int nBande, int taille_bande
 
 }
 
+/**
+ * Fonction spéciale qui va chercher le min dans le cas où l'on se trouve sur un bord ou un angle. TO DO
+ * @param x
+ * @param y
+ * @return
+ */
 int chercher_min_bord(int x, int y){
     return 1;
 }
